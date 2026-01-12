@@ -11,28 +11,40 @@
           ]
         }
       },
+      "id": "schedule-trigger",
       "name": "毎日深夜1時実行",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
-      "position": [1376, 416]
+      "position": [480, 300]
     },
     {
       "parameters": {
         "url": "https://api.chatwork.com/v2/rooms/6852214/messages?force=1",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",
-        "options": {
-          "response": {
-            "response": {
-              "responseFormat": "json"
-            }
-          }
-        }
+        "options": {}
       },
+      "id": "http-request",
       "name": "Chatwork_メッセージ取得",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1600, 416]
+      "position": [700, 300],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Chatwork API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const yesterdayStart = DateTime.now().setZone(\"Asia/Tokyo\").startOf(\"day\").minus({days:1}).toUnixInteger();\nconst todayStart = DateTime.now().setZone(\"Asia/Tokyo\").startOf(\"day\").toUnixInteger();\n\nreturn items.map(item => ({\n  json: {\n    ...item.json,\n    _isYesterday: item.json.send_time >= yesterdayStart && item.json.send_time < todayStart\n  }\n}));"
+      },
+      "id": "code-node",
+      "name": "日付判定追加",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [920, 300]
     },
     {
       "parameters": {
@@ -40,26 +52,16 @@
           "options": {
             "caseSensitive": true,
             "leftValue": "",
-            "typeValidation": "loose",
-            "version": 1
+            "typeValidation": "loose"
           },
           "conditions": [
             {
-              "id": "filter-yesterday",
-              "leftValue": "={{ $json.send_time }}",
-              "rightValue": "={{ Math.floor(new Date(new Date().toLocaleString('en-US', {timeZone: 'Asia/Tokyo'})).setHours(0,0,0,0) / 1000) - 86400 }}",
+              "id": "condition-isyesterday",
+              "leftValue": "={{ $json._isYesterday }}",
+              "rightValue": true,
               "operator": {
-                "type": "number",
-                "operation": "gte"
-              }
-            },
-            {
-              "id": "filter-yesterday-end",
-              "leftValue": "={{ $json.send_time }}",
-              "rightValue": "={{ Math.floor(new Date(new Date().toLocaleString('en-US', {timeZone: 'Asia/Tokyo'})).setHours(0,0,0,0) / 1000) }}",
-              "operator": {
-                "type": "number",
-                "operation": "lt"
+                "type": "boolean",
+                "operation": "equals"
               }
             }
           ],
@@ -69,10 +71,11 @@
           "looseTypeValidation": true
         }
       },
+      "id": "filter-node",
       "name": "前日分のみ抽出",
       "type": "n8n-nodes-base.filter",
       "typeVersion": 2,
-      "position": [1824, 416]
+      "position": [1140, 300]
     }
   ],
   "connections": {
@@ -88,6 +91,17 @@
       ]
     },
     "Chatwork_メッセージ取得": {
+      "main": [
+        [
+          {
+            "node": "日付判定追加",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "日付判定追加": {
       "main": [
         [
           {
