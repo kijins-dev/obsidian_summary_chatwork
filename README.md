@@ -1,39 +1,75 @@
-# Chatwork日次ログ取得ワークフロー
+# Chatworkログ取得自動化
 
-n8nを使用してChatworkのメッセージを毎日自動取得し、Obsidianに保存するワークフロー。
+Chatworkの全参加ルームから前日更新分のメッセージを自動取得し、Google Sheetsに保存するn8nワークフロー。
 
 ## 概要
 
-- **目的**: Chatworkの日次メッセージを自動取得・記録
-- **実行タイミング**: 毎日深夜1時（JST）
-- **対象**: 前日分のメッセージのみ抽出
+毎日深夜1時に自動実行され、以下の処理を行う：
+
+1. Chatwork APIで参加中の全ルーム一覧を取得
+2. 前日に更新があったルームを抽出
+3. 各ルームからメッセージを取得
+4. 前日分のメッセージのみフィルタ
+5. Google Sheetsに保存
+
+## 進捗状況
+
+- [x] Phase 1: 基本機能（API接続、日付フィルタ、Google Sheets保存）
+- [ ] Phase 2: Claude API要約機能
+- [ ] Phase 3: 自分宛てメンション・自分発言の分離
+- [x] Phase 4: 全ルーム対応ループ処理
+- [ ] Phase 5: 本番運用
 
 ## ワークフロー構成
 
 ```
-Schedule Trigger (毎日1時)
+毎日深夜1時実行
     ↓
-HTTP Request (Chatwork API)
+全ルーム一覧取得（GET /rooms）
     ↓
-Filter (前日分のみ抽出)
+前日更新ルーム抽出
     ↓
-[TODO] Obsidian保存
+ルームループ ←──────────┐
+    ↓ (loop)            │
+メッセージ取得          │
+    ↓                   │
+ルーム情報付与 ─────────┘
+    ↓ (done)
+日付判定追加
+    ↓
+前日分のみ抽出
+    ↓
+Google Sheets保存
 ```
 
-## ファイル構成
+## 技術構成
 
-- `workflows/chatwork_daily_log.json` - n8nワークフロー定義
-- `docs/開発記録.md` - 開発経緯・トラブルシューティング
+| 役割 | ツール |
+|------|--------|
+| ワークフロー実行 | n8n（クラウド版） |
+| メッセージ取得 | Chatwork API |
+| 要約生成 | Claude API（予定） |
+| 日次レポート | Obsidian（予定） |
+| データアーカイブ | Google Sheets |
 
-## 技術スタック
+## Google Sheets カラム
 
-- n8n (ワークフロー自動化)
-- Chatwork API
-- Obsidian Local REST API
+| カラム | 説明 |
+|--------|------|
+| date | メッセージ日付（YYYY-MM-DD） |
+| room_id | ルームID |
+| room_name | ルーム名 |
+| message_id | メッセージID |
+| account_id | 送信者ID |
+| account_name | 送信者名 |
+| body | メッセージ本文 |
+| send_time | 送信時刻（UNIXタイムスタンプ） |
 
-## 注意事項
+## 関連リンク
 
-### n8n固有の注意点
-- JSON欄では先頭の「=」は不要。`{{ }}`のみで動作
-- コピペは特殊文字混入リスクあり。動かなければ手打ち
-- Body Content Type切り替えは内部状態を壊す可能性あり
+- [n8nワークフロー](https://michi-gaeru.app.n8n.cloud/workflow/xtucgPWpcsbheP7S)
+- [Google Sheets](https://docs.google.com/spreadsheets/d/1X17pi5Nk1mpxwlY7zzoueG8ZeGdiKkyAEq8V8gZ6p-0)
+
+## ライセンス
+
+Private
