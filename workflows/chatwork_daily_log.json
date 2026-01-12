@@ -75,7 +75,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const yesterdayStart = DateTime.now().setZone(\"Asia/Tokyo\").startOf(\"day\").minus({days:1}).toUnixInteger();\nconst todayStart = DateTime.now().setZone(\"Asia/Tokyo\").startOf(\"day\").toUnixInteger();\n\nreturn items.map(item => ({\n  json: {\n    ...item.json,\n    _isYesterday: item.json.send_time >= yesterdayStart && item.json.send_time < todayStart\n  }\n}));"
+        "jsCode": "const myAccountId = 674453;\nconst yesterdayStart = DateTime.now().setZone(\"Asia/Tokyo\").startOf(\"day\").minus({days:1}).toUnixInteger();\nconst todayStart = DateTime.now().setZone(\"Asia/Tokyo\").startOf(\"day\").toUnixInteger();\n\nreturn items.map(item => {\n  const body = item.json.body || '';\n  const accountId = item.json.account?.account_id;\n  const isYesterday = item.json.send_time >= yesterdayStart && item.json.send_time < todayStart;\n  \n  let messageType = 'other';\n  if (body.includes('[To:674453]')) {\n    messageType = 'mention';\n  } else if (accountId === myAccountId) {\n    messageType = 'my_message';\n  }\n  \n  return {\n    json: {\n      ...item.json,\n      _isYesterday: isYesterday,\n      message_type: messageType\n    }\n  };\n});"
       },
       "id": "node-006",
       "name": "日付判定追加",
@@ -140,7 +140,8 @@
             "account_id": "={{ $json.account.account_id }}",
             "account_name": "={{ $json.account.name }}",
             "body": "={{ $json.body }}",
-            "send_time": "={{ $json.send_time }}"
+            "send_time": "={{ $json.send_time }}",
+            "message_type": "={{ $json.message_type }}"
           },
           "matchingColumns": [],
           "schema": [
@@ -151,7 +152,8 @@
             {"id": "account_id", "displayName": "account_id", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true},
             {"id": "account_name", "displayName": "account_name", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true},
             {"id": "body", "displayName": "body", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true},
-            {"id": "send_time", "displayName": "send_time", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true}
+            {"id": "send_time", "displayName": "send_time", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true},
+            {"id": "message_type", "displayName": "message_type", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true}
           ],
           "attemptToConvertTypes": false,
           "convertFieldsToString": false
