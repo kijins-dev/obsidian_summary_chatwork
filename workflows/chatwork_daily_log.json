@@ -2,136 +2,80 @@
   "name": "Chatwork_毎日1時_前日ログ取得",
   "nodes": [
     {
-      "parameters": {
-        "rule": {
-          "interval": [
-            {
-              "triggerAtHour": 1
-            }
-          ]
-        }
-      },
-      "id": "trigger-001",
       "name": "毎日深夜1時実行",
       "type": "n8n-nodes-base.scheduleTrigger",
-      "typeVersion": 1.2,
-      "position": [240, 300]
+      "parameters": {
+        "rule": {
+          "interval": [{"triggerAtHour": 1}]
+        }
+      }
     },
     {
+      "name": "全ルーム一覧取得",
+      "type": "n8n-nodes-base.httpRequest",
       "parameters": {
         "url": "https://api.chatwork.com/v2/rooms",
         "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "options": {}
-      },
-      "id": "node-001",
-      "name": "全ルーム一覧取得",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.3,
-      "position": [460, 300]
+        "genericAuthType": "httpHeaderAuth"
+      }
     },
     {
-      "parameters": {
-        "jsCode": "const yesterdayStart = DateTime.now().setZone(\"Asia/Tokyo\").startOf(\"day\").minus({days:1}).toUnixInteger();\nconst todayStart = DateTime.now().setZone(\"Asia/Tokyo\").startOf(\"day\").toUnixInteger();\n\nreturn items.filter(item => \n  item.json.last_update_time >= yesterdayStart && item.json.last_update_time < todayStart\n);"
-      },
-      "id": "node-002",
       "name": "前日更新ルーム抽出",
       "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [680, 300]
-    },
-    {
       "parameters": {
-        "options": {}
-      },
-      "id": "node-003",
-      "name": "ルームループ",
-      "type": "n8n-nodes-base.splitInBatches",
-      "typeVersion": 3,
-      "position": [900, 300]
+        "jsCode": "const yesterdayStart = DateTime.now().setZone('Asia/Tokyo').startOf('day').minus({days:1}).toUnixInteger();\nconst todayStart = DateTime.now().setZone('Asia/Tokyo').startOf('day').toUnixInteger();\n\nreturn items.filter(item => \n  item.json.last_update_time >= yesterdayStart && item.json.last_update_time < todayStart\n);"
+      }
     },
     {
+      "name": "ルームループ",
+      "type": "n8n-nodes-base.splitInBatches"
+    },
+    {
+      "name": "メッセージ取得",
+      "type": "n8n-nodes-base.httpRequest",
       "parameters": {
         "url": "=https://api.chatwork.com/v2/rooms/{{ $json.room_id }}/messages?force=1",
         "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "options": {}
-      },
-      "id": "node-004",
-      "name": "メッセージ取得",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.3,
-      "position": [1120, 400]
+        "genericAuthType": "httpHeaderAuth"
+      }
     },
     {
-      "parameters": {
-        "jsCode": "const roomId = $('ルームループ').item.json.room_id;\nconst roomName = $('ルームループ').item.json.name;\n\nreturn items.map(item => ({\n  json: {\n    ...item.json,\n    room_id: roomId,\n    room_name: roomName\n  }\n}));"
-      },
-      "id": "node-005",
       "name": "ルーム情報付与",
       "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [1340, 400]
+      "parameters": {
+        "jsCode": "const roomId = $('ルームループ').item.json.room_id;\nconst roomName = $('ルームループ').item.json.name;\n\nreturn items.map(item => ({\n  json: {\n    ...item.json,\n    room_id: roomId,\n    room_name: roomName\n  }\n}));"
+      }
     },
     {
-      "parameters": {
-        "jsCode": "const myAccountId = 674453;\nconst yesterdayStart = DateTime.now().setZone(\"Asia/Tokyo\").startOf(\"day\").minus({days:1}).toUnixInteger();\nconst todayStart = DateTime.now().setZone(\"Asia/Tokyo\").startOf(\"day\").toUnixInteger();\n\nreturn items.map(item => {\n  const body = item.json.body || '';\n  const accountId = item.json.account?.account_id;\n  const isYesterday = item.json.send_time >= yesterdayStart && item.json.send_time < todayStart;\n  \n  let messageType = 'other';\n  if (body.includes('[To:674453]')) {\n    messageType = 'mention';\n  } else if (accountId === myAccountId) {\n    messageType = 'my_message';\n  }\n  \n  return {\n    json: {\n      ...item.json,\n      _isYesterday: isYesterday,\n      message_type: messageType\n    }\n  };\n});"
-      },
-      "id": "node-006",
       "name": "日付判定追加",
       "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [1120, 160]
+      "parameters": {
+        "jsCode": "const myAccountId = 674453;\nconst yesterdayStart = DateTime.now().setZone('Asia/Tokyo').startOf('day').minus({days:1}).toUnixInteger();\nconst todayStart = DateTime.now().setZone('Asia/Tokyo').startOf('day').toUnixInteger();\n\nreturn items.map(item => {\n  const body = item.json.body || '';\n  const accountId = item.json.account?.account_id;\n  const isYesterday = item.json.send_time >= yesterdayStart && item.json.send_time < todayStart;\n  \n  let messageType = 'other';\n  if (body.includes('[To:674453]')) {\n    messageType = 'mention';\n  } else if (accountId === myAccountId) {\n    messageType = 'my_message';\n  }\n  \n  return {\n    json: {\n      ...item.json,\n      _isYesterday: isYesterday,\n      message_type: messageType\n    }\n  };\n});"
+      }
     },
     {
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "loose",
-            "version": 1
-          },
-          "conditions": [
-            {
-              "id": "condition-isyesterday",
-              "leftValue": "={{ $json._isYesterday }}",
-              "rightValue": true,
-              "operator": {
-                "type": "boolean",
-                "operation": "equals"
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {
-          "looseTypeValidation": true
-        }
-      },
-      "id": "node-007",
       "name": "前日分のみ抽出",
       "type": "n8n-nodes-base.filter",
-      "typeVersion": 2,
-      "position": [1340, 160]
+      "parameters": {
+        "conditions": {
+          "conditions": [
+            {
+              "leftValue": "={{ $json._isYesterday }}",
+              "rightValue": true,
+              "operator": {"type": "boolean", "operation": "equals"}
+            }
+          ]
+        }
+      }
     },
     {
+      "name": "Google Sheets保存",
+      "type": "n8n-nodes-base.googleSheets",
       "parameters": {
         "operation": "append",
-        "documentId": {
-          "__rl": true,
-          "value": "1X17pi5Nk1mpxwlY7zzoueG8ZeGdiKkyAEq8V8gZ6p-0",
-          "mode": "id"
-        },
-        "sheetName": {
-          "__rl": true,
-          "value": "gid=0",
-          "mode": "list",
-          "cachedResultName": "ChatworkMessages",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1X17pi5Nk1mpxwlY7zzoueG8ZeGdiKkyAEq8V8gZ6p-0/edit#gid=0"
-        },
+        "documentId": "1X17pi5Nk1mpxwlY7zzoueG8ZeGdiKkyAEq8V8gZ6p-0",
+        "sheetName": "ChatworkMessages",
         "columns": {
-          "mappingMode": "defineBelow",
           "value": {
             "date": "={{ DateTime.now().setZone('Asia/Tokyo').minus({days:1}).toFormat('yyyy-MM-dd') }}",
             "room_id": "={{ $json.room_id }}",
@@ -142,61 +86,83 @@
             "body": "={{ $json.body }}",
             "send_time": "={{ $json.send_time }}",
             "message_type": "={{ $json.message_type }}"
-          },
-          "matchingColumns": [],
-          "schema": [
-            {"id": "date", "displayName": "date", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true},
-            {"id": "room_id", "displayName": "room_id", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true},
-            {"id": "room_name", "displayName": "room_name", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true},
-            {"id": "message_id", "displayName": "message_id", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true},
-            {"id": "account_id", "displayName": "account_id", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true},
-            {"id": "account_name", "displayName": "account_name", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true},
-            {"id": "body", "displayName": "body", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true},
-            {"id": "send_time", "displayName": "send_time", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true},
-            {"id": "message_type", "displayName": "message_type", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true}
-          ],
-          "attemptToConvertTypes": false,
-          "convertFieldsToString": false
+          }
+        }
+      }
+    },
+    {
+      "name": "ルーム別グループ化",
+      "type": "n8n-nodes-base.code",
+      "parameters": {
+        "jsCode": "const grouped = {};\n\nfor (const item of items) {\n  const roomId = item.json.room_id;\n  const roomName = item.json.room_name;\n  \n  if (!grouped[roomId]) {\n    grouped[roomId] = {\n      room_id: roomId,\n      room_name: roomName,\n      messages: [],\n      mentions: [],\n      myMessages: []\n    };\n  }\n  \n  grouped[roomId].messages.push(item.json);\n  \n  if (item.json.message_type === 'mention') {\n    grouped[roomId].mentions.push(item.json);\n  } else if (item.json.message_type === 'my_message') {\n    grouped[roomId].myMessages.push(item.json);\n  }\n}\n\nreturn Object.values(grouped).map(g => ({ json: g }));"
+      }
+    },
+    {
+      "name": "要約リクエスト準備",
+      "type": "n8n-nodes-base.code",
+      "parameters": {
+        "jsCode": "return items.map(item => {\n  const roomName = item.json.room_name;\n  const messages = item.json.messages || [];\n  const mentions = item.json.mentions || [];\n  const myMessages = item.json.myMessages || [];\n  \n  const messageText = messages.map(m => {\n    const name = m.account?.name || '不明';\n    const body = m.body || '';\n    const type = m.message_type === 'mention' ? '[自分宛]' : \n                 m.message_type === 'my_message' ? '[自分発言]' : '';\n    return `${type}${name}: ${body}`;\n  }).join('\\n');\n  \n  const prompt = `以下のChatworkルームの会話を分析してください。情報を省略せず全て記載すること。\n\n【ルーム名】${roomName}\n【自分宛てメンション】${mentions.length}件\n【自分の発言】${myMessages.length}件\n\n【メッセージ】\n${messageText}\n\n以下の形式で出力：\n\n## 要点\n- 発言者名と内容を漏れなく記載\n- 決定事項があれば明記\n\n## 自分への関係\n- 自分宛てメンション: ${mentions.length > 0 ? 'あり' : 'なし'}\n- 自分の発言: ${myMessages.length > 0 ? 'あり' : 'なし'}\n\n## 次アクション\n- 誰が・何を・いつまでに（該当あれば、なければ「なし」）\n\n## 要対応\n- 自分が対応すべきことがあれば明記（なければ「なし」）`;\n\n  return {\n    json: {\n      room_id: item.json.room_id,\n      room_name: item.json.room_name,\n      has_mention: mentions.length > 0,\n      has_my_message: myMessages.length > 0,\n      requestBody: {\n        model: \"claude-sonnet-4-20250514\",\n        max_tokens: 2048,\n        messages: [{ role: \"user\", content: prompt }]\n      }\n    }\n  };\n});"
+      }
+    },
+    {
+      "name": "Claude API要約",
+      "type": "n8n-nodes-base.httpRequest",
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {"name": "anthropic-version", "value": "2023-06-01"},
+            {"name": "content-type", "value": "application/json"}
+          ]
         },
-        "options": {}
-      },
-      "id": "node-008",
-      "name": "Google Sheets保存",
-      "type": "n8n-nodes-base.googleSheets",
-      "typeVersion": 4.7,
-      "position": [1560, 160]
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {"name": "model", "value": "={{ $json.requestBody.model }}"},
+            {"name": "max_tokens", "value": "={{ $json.requestBody.max_tokens }}"},
+            {"name": "messages", "value": "={{ $json.requestBody.messages }}"}
+          ]
+        }
+      }
+    },
+    {
+      "name": "要約結果整形",
+      "type": "n8n-nodes-base.code",
+      "parameters": {
+        "jsCode": "const summaryItems = $('Claude API要約').all();\nconst roomItems = $('ルーム別グループ化').all();\nconst date = DateTime.now().setZone('Asia/Tokyo').minus({days:1}).toFormat('yyyy-MM-dd');\n\nlet markdown = `## Chatwork要約 (${date})\\n\\n`;\n\nfor (let i = 0; i < summaryItems.length; i++) {\n  const roomName = roomItems[i]?.json.room_name || '不明';\n  const hasMention = roomItems[i]?.json.mentions?.length > 0;\n  const hasMyMessage = roomItems[i]?.json.myMessages?.length > 0;\n  const summary = summaryItems[i]?.json.content?.[0]?.text || '要約なし';\n  \n  let calloutType = 'note';\n  if (hasMention) {\n    calloutType = 'warning';\n  } else if (hasMyMessage) {\n    calloutType = 'info';\n  }\n  \n  const selfRelation = `メンション${hasMention ? 'あり' : 'なし'} / 発言${hasMyMessage ? 'あり' : 'なし'}`;\n  \n  markdown += `> [!${calloutType}] ${roomName}\\n`;\n  markdown += `> **自分**: ${selfRelation}\\n`;\n  markdown += `>\\n`;\n  \n  const summaryLines = summary.split('\\n').map(line => `> ${line}`).join('\\n');\n  markdown += summaryLines + '\\n\\n';\n}\n\nreturn [{ json: { markdown, date } }];"
+      }
+    },
+    {
+      "name": "Obsidian保存",
+      "type": "n8n-nodes-base.httpRequest",
+      "parameters": {
+        "method": "PUT",
+        "url": "={{ \"https://naoki-obsidian.ngrok.io/vault/08_Chatworkログ/\" + $json.date + \".md\" }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "text/markdown",
+        "body": "={{ $json.markdown }}"
+      }
     }
   ],
   "connections": {
-    "毎日深夜1時実行": {
-      "main": [[{"node": "全ルーム一覧取得", "type": "main", "index": 0}]]
-    },
-    "全ルーム一覧取得": {
-      "main": [[{"node": "前日更新ルーム抽出", "type": "main", "index": 0}]]
-    },
-    "前日更新ルーム抽出": {
-      "main": [[{"node": "ルームループ", "type": "main", "index": 0}]]
-    },
-    "ルームループ": {
-      "main": [
-        [{"node": "日付判定追加", "type": "main", "index": 0}],
-        [{"node": "メッセージ取得", "type": "main", "index": 0}]
-      ]
-    },
-    "メッセージ取得": {
-      "main": [[{"node": "ルーム情報付与", "type": "main", "index": 0}]]
-    },
-    "ルーム情報付与": {
-      "main": [[{"node": "ルームループ", "type": "main", "index": 0}]]
-    },
-    "日付判定追加": {
-      "main": [[{"node": "前日分のみ抽出", "type": "main", "index": 0}]]
-    },
-    "前日分のみ抽出": {
-      "main": [[{"node": "Google Sheets保存", "type": "main", "index": 0}]]
-    }
-  },
-  "settings": {
-    "executionOrder": "v1"
+    "毎日深夜1時実行": {"main": [[{"node": "全ルーム一覧取得"}]]},
+    "全ルーム一覧取得": {"main": [[{"node": "前日更新ルーム抽出"}]]},
+    "前日更新ルーム抽出": {"main": [[{"node": "ルームループ"}]]},
+    "ルームループ": {"main": [[{"node": "日付判定追加"}], [{"node": "メッセージ取得"}]]},
+    "メッセージ取得": {"main": [[{"node": "ルーム情報付与"}]]},
+    "ルーム情報付与": {"main": [[{"node": "ルームループ"}]]},
+    "日付判定追加": {"main": [[{"node": "前日分のみ抽出"}]]},
+    "前日分のみ抽出": {"main": [[{"node": "ルーム別グループ化"}, {"node": "Google Sheets保存"}]]},
+    "ルーム別グループ化": {"main": [[{"node": "要約リクエスト準備"}]]},
+    "要約リクエスト準備": {"main": [[{"node": "Claude API要約"}]]},
+    "Claude API要約": {"main": [[{"node": "要約結果整形"}]]},
+    "要約結果整形": {"main": [[{"node": "Obsidian保存"}]]}
   }
 }

@@ -1,6 +1,6 @@
 # Chatworkログ取得自動化
 
-Chatworkの全参加ルームから前日更新分のメッセージを自動取得し、Google Sheetsに保存するn8nワークフロー。
+Chatworkの全参加ルームから前日更新分のメッセージを自動取得し、Claude APIで要約してObsidianに保存するn8nワークフロー。
 
 ## 概要
 
@@ -11,12 +11,14 @@ Chatworkの全参加ルームから前日更新分のメッセージを自動取
 3. 各ルームからメッセージを取得
 4. 前日分のメッセージのみフィルタ
 5. メッセージを分類（自分宛てメンション/自分の発言/その他）
-6. Google Sheetsに保存
+6. Google Sheetsに生データ保存
+7. ルーム別にClaude APIで要約
+8. Obsidianデイリーノートに保存（Callout形式）
 
 ## 進捗状況
 
 - [x] Phase 1: 基本機能（API接続、日付フィルタ、Google Sheets保存）
-- [ ] Phase 2: Claude API要約機能
+- [x] Phase 2: Claude API要約機能 + Obsidian出力
 - [x] Phase 3: 自分宛てメンション・自分発言の分離
 - [x] Phase 4: 全ルーム対応ループ処理
 - [ ] Phase 5: 本番運用
@@ -39,8 +41,17 @@ Chatworkの全参加ルームから前日更新分のメッセージを自動取
 日付判定追加（+ message_type分類）
     ↓
 前日分のみ抽出
+    ├→ Google Sheets保存（生データ）
     ↓
-Google Sheets保存
+ルーム別グループ化
+    ↓
+要約リクエスト準備
+    ↓
+Claude API要約
+    ↓
+要約結果整形（Callout形式）
+    ↓
+Obsidian保存
 ```
 
 ## 技術構成
@@ -49,9 +60,16 @@ Google Sheets保存
 |------|--------|
 | ワークフロー実行 | n8n（クラウド版） |
 | メッセージ取得 | Chatwork API |
-| 要約生成 | Claude API（予定） |
-| 日次レポート | Obsidian（予定） |
+| 要約生成 | Claude API（claude-sonnet-4-20250514） |
+| 日次レポート | Obsidian（Local REST API + ngrok） |
 | データアーカイブ | Google Sheets |
+
+## Obsidian出力形式
+
+Callout形式で色分け：
+- `[!warning]` オレンジ: 自分宛てメンションあり
+- `[!info]` 青: 自分の発言あり（メンションなし）
+- `[!note]` グレー: どちらもなし
 
 ## Google Sheets カラム
 
